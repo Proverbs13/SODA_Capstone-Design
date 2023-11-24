@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 배경으로 사용할 원 모양의 도형 -->
+    <item android:drawable="@drawable/rounded_rectangle_incoming" />
+
+    <!-- 원 모양의 도형을 stroke(테두리)로 사용하여 외곽선 효과 추가 -->
+    <item android:drawable="@drawable/rounded_rectangle_stroke" />
+
+</layer-list>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/label_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="90dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginLeft="@dimen/margin_width"
+        android:layout_marginRight="@dimen/margin_width"
+        android:textColor="@android:color/black"
+        android:textSize="30sp"
+        android:gravity="center"
+        tools:text="~소리인 것 같습니다."
+        android:fontFamily="@font/jua_regular"
+        android:background="@drawable/text_box"
+        android:paddingBottom="10dp" />
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="25dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/label_text_view"
+        android:layout_marginLeft="@dimen/margin_width"
+        android:layout_marginRight="@dimen/margin_width"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:indeterminate="false"
+        android:progressDrawable="@drawable/progress_bar"
+        android:progressTint="@color/sky_blue"
+        android:progressBackgroundTint="@color/white_blue"
+        tools:progress="80" />
+
+    <View
+        android:id="@+id/shadow_bar"
+        android:layout_width="match_parent"
+        android:layout_height="0.1dp"
+        android:background="@color/sky_blue"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progress_bar"
+        android:layout_marginLeft="28dp"
+        android:layout_marginRight="28dp"
+        android:elevation="4dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
