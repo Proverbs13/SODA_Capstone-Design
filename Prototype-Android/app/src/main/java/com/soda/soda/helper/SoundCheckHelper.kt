@@ -1,5 +1,6 @@
 package com.soda.soda.helper
 
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,9 +9,11 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.soda.soda.DialogInterface
+import com.soda.soda.LockScreenActivity
 import com.soda.soda.MainActivity
 import com.soda.soda.R
 import org.tensorflow.lite.support.audio.TensorAudio
@@ -29,18 +32,6 @@ object SoundCheckHelper{
     var soundDecibel: Int = 0
     private var dialogInterface: DialogInterface? = null
     private var isNotifying = false
-    private var savedPhoneNumber: String? = null
-    private var savedMessage: String? = null
-
-    // 디폴트 번호와 메시지 설정
-    val phoneNumber = "01050980318" // 대상 전화번호
-    val message = "테스트!!" // 보낼 메시지 내용
-
-    init {
-        // SoundCheckHelper 객체 초기화 시 디폴트 전화번호와 메시지 설정
-        savedPhoneNumber = phoneNumber
-        savedMessage = message
-    }
 
     fun soundCheck(tensorAudio: TensorAudio, bytesRead: Int, context: Context) {
         buffer = tensorAudio.tensorBuffer
@@ -111,6 +102,24 @@ object SoundCheckHelper{
         warningLabel = AudioClassificationHelper.label!! + " 주의하세요!"
         warningLock = (AudioClassificationHelper.label?.substring(0, AudioClassificationHelper.label.length - 5) ?: "") + " 발생!!"
 
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+
+        // 락 스크린 액티비티 잠금화면 위에 띄우기 ::
+        if (!isScreenOn(context)) {
+            turnScreenOn(context)
+            if (keyguardManager.isKeyguardLocked) {
+                launchLockScreenActivity(context, warningLock)
+            }
+        }
+        else{ // 화면 켜져있을때
+            if (keyguardManager.isKeyguardLocked) {
+                launchLockScreenActivity(context, warningLock)
+            }
+            else{
+                launchApp(context)
+            }
+        }
+
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -149,6 +158,51 @@ object SoundCheckHelper{
         Handler(Looper.getMainLooper()).postDelayed({
             isNotifying = false
         }, 3000)
+    }
+
+    /** 화면을 켜는 함수 **/
+    private fun turnScreenOn(context: Context) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+
+        // 화면이 이미 켜져 있는 경우에는 추가 동작 필요 없음
+        if (powerManager.isInteractive) {
+            return
+        }
+
+        // 화면을 켜기 위한 WakeLock을 획득
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK,
+            "MyApp::MyWakelockTag"
+        )
+
+        wakeLock.acquire(5000) // 화면을 최대 5초간 켜도록 설정
+
+        // WakeLock을 해제하여 화면을 다시 잠그도록 설정
+        wakeLock.release()
+    }
+
+    /** 강제로 앱 실행하는 함수 **/
+    private fun launchApp(context: Context) {
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra("show_dialog", true)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        context.startActivity(openAppIntent)
+    }
+
+    /** 화면을 켜져있는지 여부 확인 함수 **/
+    private fun isScreenOn(context: Context): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return powerManager.isInteractive
+    }
+
+    private fun launchLockScreenActivity(context: Context, notificationText: String) {
+        // 잠금화면 상태일 때만 LockScreenActivity를 띄움
+        val openLockScreenIntent = Intent(context, LockScreenActivity::class.java)
+        openLockScreenIntent.flags =
+            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        openLockScreenIntent.putExtra("notification_text", notificationText)
+        context.startActivity(openLockScreenIntent)
     }
 
     fun setInterface(dialogInterface: DialogInterface?) {

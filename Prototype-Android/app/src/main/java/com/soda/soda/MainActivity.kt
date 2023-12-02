@@ -14,16 +14,20 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.NavHostFragment
 import com.soda.soda.databinding.ActivityMainBinding
 import com.soda.soda.databinding.ToolbarLayoutBinding
 import com.soda.soda.fragments.AudioFragment
 import com.soda.soda.fragments.PermissionsFragment
+import com.soda.soda.fragments.SubSettingFragment
 import com.soda.soda.fragments.WarningFragment
 import com.soda.soda.helper.SoundCheckHelper
+import com.soda.soda.service.ForegroundService
 
 private const val TAG = "MainActivity"
 
@@ -47,14 +51,25 @@ class MainActivity : AppCompatActivity(), DialogInterface{
         activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(activityMainBinding.root)
 
+        // 백그라운드 스위치 상태 설정
+        SubSettingFragment.backgroundSwitchState = SubSettingFragment.setSwitchState(this, "background_shared_pref", "background_switch_state", false)
+
         // 인터페이스 설정
         SoundCheckHelper.setInterface(this)
+
+        // 포그라운드 서비스 설정
+        if(SubSettingFragment.backgroundSwitchState)
+            ContextCompat.startForegroundService(this, Intent(this, ForegroundService::class.java))
 
         // 툴바 레이아웃 뷰 가져오기
         val toolbarLayoutView = activityMainBinding.root.findViewById<View>(R.id.toolbar_layout)
         // 툴바 레이아웃 뷰 바인딩
         toolbarLayoutBinding = ToolbarLayoutBinding.bind(toolbarLayoutView)
         setSupportActionBar(toolbarLayoutBinding.toolbar)
+
+        toolbarLayoutBinding.buttonSetting.setOnClickListener {
+            navigateToFragment(SubSettingFragment()) // SubSettingFragment로 이동
+        }
 
         toolbarLayoutBinding.buttonBack.setOnClickListener {
             onBackPressed()
@@ -84,6 +99,9 @@ class MainActivity : AppCompatActivity(), DialogInterface{
 
         // 액티비티가 종료될 때 Object에 설정된 인터페이스 제거
         SoundCheckHelper.setInterface(null)
+
+        // 포그라운드 서비스를 종료
+        stopService(Intent(this, ForegroundService::class.java))
 
         // 녹음 및 스레드 작업 종료
         AudioFragment.getAudioHelper()?.stopAudioClassification()
@@ -116,10 +134,16 @@ class MainActivity : AppCompatActivity(), DialogInterface{
             }
         }
 
-        // 현재 프래그먼트가 ChattingFragment이면 툴바 타이틀 가시성을 GONE으로 변경
-        if (currentFragment is NavHostFragment) {
+        if (currentFragment is SubSettingFragment) { // SettingFragment != NavHostFragment
+            // SettingFragment에서 뒤로 가기를 눌렀을 때 setting button을 다시 보이게 함
             toolbarLayoutBinding.buttonSetting.visibility = View.VISIBLE
+            // TextView 가리기
             toolbarLayoutBinding.toolbarTitle.visibility = View.GONE
+        }
+
+        if (currentFragment is SubSettingFragment) {
+            // 둘 중 하나라도 만족하는 경우, 툴바의 내용을 "설정"으로 변경
+            toolbarLayoutBinding.toolbarTitle.text = "설정"
         }
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
@@ -127,6 +151,17 @@ class MainActivity : AppCompatActivity(), DialogInterface{
         } else {
             super.onBackPressed()
         }
+    }
+
+    /** 프래그먼트 교체함수 **/
+    private fun navigateToFragment(fragment: SubSettingFragment) {
+        toolbarLayoutBinding.buttonSetting.visibility = View.GONE
+        toolbarLayoutBinding.toolbarTitle.text = "설정" // 원하는 텍스트로 변경
+        toolbarLayoutBinding.toolbarTitle.visibility = View.VISIBLE
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 
     /** 대화상자 생성 **/

@@ -17,9 +17,7 @@
 package com.soda.soda.fragments
 
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.media.AudioRecord
 import android.os.Bundle
 import android.util.Log
@@ -36,14 +34,9 @@ import com.soda.soda.ui.ProbabilitiesAdapter
 import org.tensorflow.lite.support.label.Category
 
 
-//stt
-import android.os.Handler
-import android.os.Looper
-import androidx.core.content.ContextCompat
 import androidx.navigation.Navigation
 import com.soda.soda.MainActivity
-
-private const val requestCode = 123
+import com.soda.soda.service.ForegroundService
 
 private const val TAG = "AudioFragment"
 
@@ -56,20 +49,11 @@ interface AudioClassificationListener {
 class AudioFragment : Fragment() {
     private var _fragmentBinding: FragmentAudioBinding? = null
     private val fragmentAudioBinding get() = _fragmentBinding!!
-    private var recordingDotCount = 0
     private lateinit var mainActivity: MainActivity
     override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is MainActivity) {
             mainActivity = context
-        }
-    }
-    private val recordingHandler = Handler(Looper.getMainLooper())
-    private val recordingRunnable = object : Runnable {
-        override fun run() {
-            recordingDotCount = (recordingDotCount + 1) % 4
-            fragmentAudioBinding.recordingText.text = "녹음중" + ".".repeat(recordingDotCount)
-            recordingHandler.postDelayed(this, 500)
         }
     }
 
@@ -113,11 +97,6 @@ class AudioFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 메시지 전송 권한을 요청하는 함수 호출
-        if (!hasSMSPermission(requireContext())) {
-            requestSMSPermission(requireContext())
-        }
-
         fragmentAudioBinding.recyclerView.adapter = adapter
 
         if(audioHelper == null){
@@ -134,24 +113,6 @@ class AudioFragment : Fragment() {
         super.onDestroyView()
     }
 
-    /** 메시지 전송 권한을 가지고 있는지 확인하는 함수 **/
-    private fun hasSMSPermission(context: Context): Boolean {
-        val permission = Manifest.permission.SEND_SMS
-        val granted = PackageManager.PERMISSION_GRANTED
-
-        return ContextCompat.checkSelfPermission(context, permission) == granted
-    }
-
-    /** 메시지 전송 권한을 요청하는 함수 **/
-    private fun requestSMSPermission(context: Context) {
-        val permission = Manifest.permission.SEND_SMS
-        val granted = PackageManager.PERMISSION_GRANTED
-
-        if (ContextCompat.checkSelfPermission(context, permission) != granted) {
-            requestPermissions(arrayOf(permission), requestCode)
-        }
-    }
-
     override fun onResume() {
         super.onResume()
         if (!PermissionsFragment.hasAudioPermission(requireContext())) {
@@ -166,23 +127,14 @@ class AudioFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        stopRecording()
+        if(!SubSettingFragment.isMyServiceRunning(requireContext(), ForegroundService::class.java)){
+            stopRecording()
+        }
     }
 
     companion object {
-        private var isListening = false
         private var audioHelper: AudioClassificationHelper? = null
         private val adapter by lazy { ProbabilitiesAdapter() }
-
-        // Getter 메서드 추가
-        fun getAdapterInstance(): ProbabilitiesAdapter {
-            return adapter
-        }
-
-        //setter 추가
-        fun setListening(value: Boolean) {
-            isListening = value
-        }
 
         fun startRecording() {
             if(audioHelper?.getRecorderState() != AudioRecord.RECORDSTATE_RECORDING){
@@ -190,6 +142,7 @@ class AudioFragment : Fragment() {
                 Log.d(TAG, "녹음 재개")
             }
         }
+
         fun stopRecording() {
             if(audioHelper?.getRecorderState() != AudioRecord.RECORDSTATE_STOPPED){
                 audioHelper?.stopAudioClassification()
@@ -205,10 +158,6 @@ class AudioFragment : Fragment() {
 
         fun setAudioHelper(){
             audioHelper = null
-        }
-
-        fun isListening(): Boolean {
-            return isListening
         }
     }
 }
